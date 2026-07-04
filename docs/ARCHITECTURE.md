@@ -71,3 +71,15 @@ src/
 ### Points en attente pour la comparaison d'équipe
 - Design/UI encore basique (Tailwind par défaut) — une passe de design est prévue après comparaison des 3 implémentations
 - RLS pas encore posée sur `commandes`, `clients`, `livreurs`, `medias`, `stats_evenements` (à affiner selon la logique métier des phases suivantes)
+
+## Système de design
+
+### Tokens (voir src/app/globals.css)
+- **Couleurs** : encre #1B1A2E, papier #FAF8F3, primaire (indigo) #3D3691, accent (ambre) #E8A33D, succès #3E7C59, danger #B23A48
+- **Typographie** : Space Grotesk (titres/display), Inter (texte courant), IBM Plex Mono (tous les chiffres — prix, stats, horodatages)
+
+### Signature visuelle : le motif "facturette"
+Inspiré du concept de "Facturette" du cahier des charges (§6.2) : le produit transforme une conversation WhatsApp en reçu de vente. Les cartes de statistiques et le panneau de notifications reprennent ce langage visuel (bord en pointillés façon ticket détachable, chiffres en monospace), pour ancrer l'identité du produit dans son propre mécanisme métier plutôt que dans une esthétique générique ou une géographie spécifique — la plateforme cible les marchés africains et internationaux, pas un seul pays.
+
+### Sidebar sombre
+Contraste volontaire avec le fond papier du contenu, pour une identité immédiate et une navigation claire.
