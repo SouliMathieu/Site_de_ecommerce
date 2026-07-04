@@ -26,7 +26,7 @@ export function NotificationBell() {
           setNotifications((prev) => [
             {
               id: nouvelleCommande.id,
-              message: `Nouvelle commande reçue — ${nouvelleCommande.prix_final} MAD`,
+              message: `Nouvelle commande — ${nouvelleCommande.prix_final} `,
               createdAt: new Date(),
             },
             ...prev,
@@ -44,28 +44,45 @@ export function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setIsOpen((v) => !v)}
-        className="relative rounded-md p-2 text-gray-600 hover:bg-gray-100"
+        className="relative rounded-md p-2 text-muted hover:bg-paper hover:text-ink"
       >
         🔔
         {notifications.length > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
+          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-danger font-mono text-[10px] font-medium text-white">
             {notifications.length}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 mt-2 w-72 rounded-md border border-gray-200 bg-white shadow-lg">
+        <div className="absolute right-0 z-10 mt-2 w-72 rounded-md border border-border bg-surface shadow-lg">
+          <div className="border-b border-border px-3 py-2">
+            <p className="text-xs font-medium uppercase tracking-wider text-muted">
+              Notifications
+            </p>
+          </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="p-4 text-sm text-gray-400">Aucune notification pour l&apos;instant.</p>
+              <p className="p-4 text-sm text-muted">Aucune notification pour l&apos;instant.</p>
             ) : (
-              notifications.map((n) => (
-                <div key={n.id} className="border-b border-gray-100 p-3 text-sm text-gray-700 last:border-0">
-                  {n.message}
-                  <p className="mt-0.5 text-xs text-gray-400">
+              notifications.map((n, i) => (
+                <div
+                  key={n.id}
+                  className="relative border-b border-border p-3 text-sm text-ink last:border-0"
+                >
+                  <p>{n.message}</p>
+                  <p className="mt-0.5 font-mono text-xs text-muted">
                     {n.createdAt.toLocaleTimeString('fr-FR')}
                   </p>
+                  {i < notifications.length - 1 && (
+                    <div
+                      className="absolute inset-x-3 bottom-0 h-px"
+                      style={{
+                        backgroundImage:
+                          'repeating-linear-gradient(to right, var(--color-border) 0, var(--color-border) 3px, transparent 3px, transparent 7px)',
+                      }}
+                    />
+                  )}
                 </div>
               ))
             )}
