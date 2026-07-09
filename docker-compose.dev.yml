@@ -1,0 +1,49 @@
+# Surcharge de développement : hot-reload + accès direct aux services depuis l'hôte.
+# Usage : docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+
+  redis:
+    ports:
+      - '6379:6379'
+
+  api:
+    build:
+      target: deps
+    command: sh -c "npm run prisma:generate -w apps/api && npm run start:dev -w apps/api"
+    environment:
+      COOKIE_SECURE: 'false'
+      CORS_ORIGIN: http://localhost:3000
+    volumes:
+      - ./apps/api:/app/apps/api
+      - ./packages/shared:/app/packages/shared
+      - api_node_modules:/app/apps/api/node_modules
+      - shared_node_modules:/app/packages/shared/node_modules
+    ports:
+      - '3001:3001'
+
+  web:
+    build:
+      target: deps
+    command: sh -c "npm run dev -w apps/web"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_WS_URL: http://localhost:3001
+    volumes:
+      - ./apps/web:/app/apps/web
+      - ./packages/shared:/app/packages/shared
+      - web_node_modules:/app/apps/web/node_modules
+      - shared_node_modules_web:/app/packages/shared/node_modules
+    ports:
+      - '3000:3000'
+
+  nginx:
+    profiles: ['with-proxy']
+
+volumes:
+  api_node_modules:
+  web_node_modules:
+  shared_node_modules:
+  shared_node_modules_web:
