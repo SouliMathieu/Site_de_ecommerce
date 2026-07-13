@@ -1,0 +1,287 @@
+// ==========================================
+// Schéma Prisma - Plateforme de Vente Intelligente
+// ==========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========== UTILISATEURS & AUTH ==========
+
+model Vendor {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  avatar    String?
+  storeName String?
+  role      String   @default("VENDOR")
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products       Product[]
+  orders         Order[]
+  customers      Customer[]
+  notifications  Notification[]
+  refreshTokens  RefreshToken[]
+  chatHistory    ChatHistory[]
+  media          Media[]
+  deliveryPeople DeliveryPerson[]
+
+  @@map("vendors")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+// ========== PRODUITS ==========
+
+model Product {
+  id              String   @id @default(cuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name            String
+  slug            String   @unique
+  description     String
+  shortDescription String?
+  price           Float
+  comparePrice    Float?
+  costPrice       Float?
+  minPrice        Float?
+  stock           Int      @default(0)
+  status          String   @default("DRAFT")
+  category        String   @default("OTHER")
+  tags            String[]
+  features        String[]
+  benefits        String[]
+  aiDescription   String?
+  aiCopywriting   String?
+  salesCount      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  images        Media[]
+  orderItems    OrderItem[]
+  negotiations  ChatHistory[]
+
+  @@map("products")
+}
+
+// ========== MÉDIAS ==========
+
+model Media {
+  id              String   @id @default(cuid())
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  productId       String?
+  product         Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  url             String
+  thumbnailUrl    String?
+  type            String   @default("IMAGE")
+  format          String   @default("ORIGINAL")
+  alt             String?
+  width           Int?
+  height          Int?
+  fileSize        Int?
+  processingStatus String? @default("PENDING")
+  createdAt       DateTime @default(now())
+
+  @@map("media")
+}
+
+// ========== CLIENTS ==========
+
+model Customer {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String
+  city      String?
+  district  String?
+  address   String?
+  whatsappConversationId String?
+  totalOrders Int    @default(0)
+  totalSpent  Float  @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders      Order[]
+  messages    ChatMessage[]
+  negotiations ChatHistory[]
+
+  @@unique([vendorId, phone])
+  @@map("customers")
+}
+
+// ========== COMMANDES ==========
+
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique
+  vendorId        String
+  vendor          Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  totalAmount     Float
+  discountAmount  Float    @default(0)
+  deliveryFee     Float    @default(0)
+  finalAmount     Float
+  status          String   @default("PENDING")
+  paymentStatus   String   @default("PENDING")
+  paymentMethod   String   @default("CASH")
+  negotiationStep String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  items       OrderItem[]
+  delivery    Delivery?
+  payments    Payment[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int
+  unitPrice   Float
+  totalPrice  Float
+
+  @@map("order_items")
+}
+
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount        Float
+  method        String
+  status        String   @default("PENDING")
+  transactionId String?
+  metadata      Json?
+  createdAt     DateTime @default(now())
+
+  @@map("payments")
+}
+
+// ========== LIVREURS ==========
+
+model DeliveryPerson {
+  id                 String   @id @default(cuid())
+  vendorId           String
+  vendor             Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  name               String
+  phone              String
+  email              String?
+  zones              String[]
+  isAvailable        Boolean  @default(true)
+  currentLoad        Int      @default(0)
+  maxLoad            Int      @default(20)
+  successRate        Float    @default(0)
+  averageDeliveryTime Float   @default(0)
+  performanceScore   Float    @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  deliveries Delivery[]
+
+  @@map("delivery_persons")
+}
+
+model Delivery {
+  id                String   @id @default(cuid())
+  orderId           String   @unique
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  deliveryPersonId  String?
+  deliveryPerson    DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
+  status            String   @default("ASSIGNED")
+  pickupAddress     String?
+  deliveryAddress   String
+  gpsCoordinates    String?
+  estimatedDeliveryDate DateTime?
+  pickedUpAt        DateTime?
+  deliveredAt       DateTime?
+  trackingUrl       String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("deliveries")
+}
+
+// ========== CHAT & NÉGOCIATION ==========
+
+model ChatHistory {
+  id          String   @id @default(cuid())
+  vendorId    String
+  vendor      Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id])
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  currentStep String   @default("GREETING")
+  originalPrice Float?
+  currentPrice  Float?
+  floorPrice    Float?
+  isActive    Boolean  @default(true)
+  startedAt   DateTime @default(now())
+  lastActivity DateTime @default(now())
+
+  messages ChatMessage[]
+
+  @@map("chat_histories")
+}
+
+model ChatMessage {
+  id          String   @id @default(cuid())
+  chatHistoryId String
+  chatHistory ChatHistory @relation(fields: [chatHistoryId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  role        String   // 'customer' | 'bot' | 'vendor'
+  content     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@map("chat_messages")
+}
+
+// ========== NOTIFICATIONS ==========
+
+model Notification {
+  id        String   @id @default(cuid())
+  vendorId  String
+  vendor    Vendor   @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  data      Json?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+// ========== REDIS CACHE (optionnel, géré via ioredis) ==========
+// Les caches sont gérés au niveau application, pas en BDD
