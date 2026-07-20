@@ -1,9 +1,12 @@
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import { PageHeader } from '@/components/dashboard/PageHeader'
 import { redirect } from 'next/navigation'
-import { CurrencyForm } from '@/components/dashboard/CurrencyForm'
+import { PageHeader } from '@/components/dashboard/PageHeader'
+import { StatCard } from '@/components/dashboard/StatCard'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { getDashboardStats } from '@/lib/dashboard-stats'
+import { formatCurrency } from '@/lib/format'
 
-export default async function ParametresPage() {
+export default async function DashboardPage() {
   const supabase = await createServerSupabaseClient()
   const {
     data: { user },
@@ -11,30 +14,55 @@ export default async function ParametresPage() {
 
   if (!user) redirect('/login')
 
-  const { data: profil } = await supabase
-    .from('profils_vendeurs')
-    .select('nom_boutique, telephone, role, devise')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profil }, stats] = await Promise.all([
+    supabase.from('profils_vendeurs').select('devise').eq('id', user.id).single(),
+    getDashboardStats(user.id),
+  ])
+  const devise = profil?.devise ?? 'USD'
 
   return (
     <div>
-      <PageHeader title="Paramètres" description="Informations de votre compte vendeur." />
-      <div className="max-w-md space-y-6 rounded-lg border border-border bg-surface p-6">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Email</p>
-          <p className="text-sm text-ink">{user.email}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Nom de la boutique</p>
-          <p className="text-sm text-ink">{profil?.nom_boutique ?? '—'}</p>
-        </div>
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted">Rôle</p>
-          <p className="text-sm text-ink">{profil?.role ?? '—'}</p>
-        </div>
+      <PageHeader title="Vue d'ensemble" description="Aperçu de l'activité de votre boutique." />
 
-        <CurrencyForm currentDevise={profil?.devise ?? 'USD'} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatCard
+          label="Chiffre d'affaires"
+          value={formatCurrency(stats.chiffreAffaires, devise)}
+          hint="Commandes livrées"
+        />
+        <StatCard label="Commandes" value={String(stats.nombreCommandes)} />
+        <StatCard
+          label="Taux de conversion"
+          value={stats.tauxConversion > 0 ? `${stats.tauxConversion}%` : '—'}
+          hint="Disponible en Phase 3 (tracking UTM)"
+        />
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-3 font-display text-base font-semibold text-ink">Top produits</h2>
+        {stats.topProduits.length === 0 ? (
+          <EmptyState
+            icon="📈"
+            title="Pas encore de ventes"
+            description="Vos produits les plus vendus apparaîtront ici une fois des commandes livrées."
+          />
+        ) : (
+          <div className="space-y-2">
+            {stats.topProduits.map((p, i) => (
+              <div
+                key={p.nom}
+                className="flex items-center justify-between rounded-md border border-border bg-surface p-3 text-sm"
+              >
+                <span className="font-medium text-ink">
+                  {i + 1}. {p.nom}
+                </span>
+                <span className="text-muted">
+                  {p.ventes} vendu{p.ventes > 1 ? 's' : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

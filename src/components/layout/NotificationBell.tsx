@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { formatCurrency } from '@/lib/format'
 
 interface Notification {
   id: string
@@ -15,28 +16,70 @@ export function NotificationBell() {
 
   useEffect(() => {
     const supabase = createClient()
+    let produitIdsDuVendeur = new Set<string>()
+    let devise = 'USD'
+    let channel: ReturnType<typeof supabase.channel> | null = null
 
-    const channel = supabase
-      .channel('commandes-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: process.env.NEXT_PUBLIC_DB_SCHEMA || 'public', table: 'commandes' },
-        (payload) => {
-          const nouvelleCommande = payload.new as { id: string; prix_final: number }
-          setNotifications((prev) => [
-            {
-              id: nouvelleCommande.id,
-              message: `Nouvelle commande — ${nouvelleCommande.prix_final} `,
-              createdAt: new Date(),
-            },
-            ...prev,
-          ])
-        }
-      )
-      .subscribe()
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
+
+      const [{ data: produits }, { data: profil }] = await Promise.all([
+        supabase.from('produits').select('id').eq('vendeur_id', user.id),
+        supabase.from('profils_vendeurs').select('devise').eq('id', user.id).single(),
+      ])
+
+      produitIdsDuVendeur = new Set((produits ?? []).map((p) => p.id as string))
+      devise = profil?.devise ?? 'USD'
+      if (produitIdsDuVendeur.size === 0) return
+
+      channel = supabase
+        .channel('commandes-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: process.env.NEXT_PUBLIC_DB_SCHEMA || 'public',
+            table: 'commandes',
+            // Filtre côté serveur : ne reçoit que les commandes sur les produits de ce vendeur.
+            // Vient en complément des policies RLS (defense-in-depth), pas en remplacement.
+            filter: `produit_id=in.(${Array.from(produitIdsDuVendeur).join(',')})`,
+          },
+          async (payload) => {
+            const nouvelleCommande = payload.new as {
+              id: string
+              produit_id: string
+              prix_final: number
+            }
+
+            // Double vérification côté client, au cas où le filtre serveur serait contourné.
+            if (!produitIdsDuVendeur.has(nouvelleCommande.produit_id)) return
+
+            const { data: produit } = await supabase
+              .from('produits')
+              .select('nom')
+              .eq('id', nouvelleCommande.produit_id)
+              .single()
+
+            setNotifications((prev) => [
+              {
+                id: nouvelleCommande.id,
+                message: `Nouvelle commande — ${produit?.nom ?? 'Produit'} — ${formatCurrency(nouvelleCommande.prix_final, devise)}`,
+                createdAt: new Date(),
+              },
+              ...prev,
+            ])
+          }
+        )
+        .subscribe()
+    }
+
+    init()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) supabase.removeChannel(channel)
     }
   }, [])
 

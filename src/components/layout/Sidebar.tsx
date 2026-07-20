@@ -2,20 +2,13 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Vue d\'ensemble', icon: '📊' },
-  { href: '/dashboard/catalogue', label: 'Catalogue', icon: '🛍️' },
-  { href: '/dashboard/commandes', label: 'Commandes', icon: '📦' },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: '📈' },
-  { href: '/dashboard/parametres', label: 'Paramètres', icon: '⚙️' },
-]
+import { NAV_ITEMS } from './nav-items'
 
 export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="flex h-screen w-64 flex-col bg-ink">
+    <aside className="hidden h-screen w-64 flex-col bg-ink lg:flex">
       <div className="flex h-16 items-center border-b border-white/10 px-6">
         <span className="font-display text-lg font-semibold text-white">Ma Boutique</span>
       </div>
