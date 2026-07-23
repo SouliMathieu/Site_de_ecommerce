@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  /* Couleurs — ancrées dans le concept de "facturette" : indigo digital + ambre transactionnel */
+  --color-ink: #1B1A2E;
+  --color-paper: #FAF8F3;
+  --color-surface: #FFFFFF;
+  --color-primary: #3D3691;
+  --color-primary-dark: #2B2568;
+  --color-accent: #E8A33D;
+  --color-success: #3E7C59;
+  --color-danger: #B23A48;
+  --color-border: #E6E1D6;
+  --color-muted: #8B8878;
+
+  /* Typographie */
+  --font-display: var(--font-display), 'Space Grotesk', sans-serif;
+  --font-body: var(--font-body), 'Inter', sans-serif;
+  --font-mono: var(--font-mono), 'IBM Plex Mono', monospace;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/* Respecte les préférences de mouvement réduit */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
